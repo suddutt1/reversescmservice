@@ -148,7 +148,34 @@ public class AssetManagementHLFDAO {
 		}
 		return response;
 	}
-
+	/**
+	 * Retrieves history of a line item
+	 * 
+	 * @param lineItemid
+	 *            String Line item id
+	 * @param businessEntity
+	 *            String
+	 * @return HLFabricResponse
+	 */
+	public static HLFabricResponse getLineitemsHistory(String lineItemid, String businessEntity) {
+		HLFabricResponse response = null;
+		try {
+			HLFabricClient client = getClient(businessEntity);
+			if (client.register()) {
+				HLFabricRequest getASNDetailsRequest = buildGetLineItemsHistory(lineItemid,
+						getUserId(businessEntity));
+				response = client.invokeMethod(getASNDetailsRequest);
+			} else {
+				response = new HLFabricResponse(false);
+				response.setMessage("User registration failed");
+			}
+		} catch (Exception ex) {
+			_LOGGER.log(Level.WARNING, "HLF getLineitemsHistory failed ", ex);
+			response = new HLFabricResponse(false);
+			response.setMessage("Exception in getLineitemsHistory:" + ex.getMessage());
+		}
+		return response;
+	}
 	/**
 	 * Retrieves all line item count based on status
 	 * 
@@ -449,6 +476,27 @@ public class AssetManagementHLFDAO {
 		request.setCallFunction("getLineitemByStatus");
 
 		request.setFunctionArgs(new String[] { status, userId });
+
+		request.setSecureContext(userId);
+		return request;
+	}
+	/**
+	 * Builds a HLF request object for retrieving line items for the input
+	 * status
+	 * 
+	 * @param lineItemId
+	 *            String
+	 * @param userId
+	 *            String
+	 * @return HLFabricRequest
+	 */
+	private static HLFabricRequest buildGetLineItemsHistory(String lineItemId, String userId) {
+		HLFabricRequest request = new HLFabricRequest();
+		request.setMethod("query");
+		request.setChainCodeName(_chainCode);
+		request.setCallFunction("getLineItemWithHistory");
+
+		request.setFunctionArgs(new String[] { lineItemId, userId });
 
 		request.setSecureContext(userId);
 		return request;

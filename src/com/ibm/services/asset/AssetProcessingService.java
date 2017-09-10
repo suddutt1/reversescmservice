@@ -2,6 +2,8 @@ package com.ibm.services.asset;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -167,7 +169,14 @@ public class AssetProcessingService {
 					if (hlfResponse.isOk()) {
 						list = buildMFRDetailsFromFabricResponse(hlfResponse.getMessage());
 					}
-				} else {
+				} else if ("LINE_HISTORY".equals(searchType)){
+					hlfResponse = AssetManagementHLFDAO.getLineitemsHistory(value.trim(),
+							ApplicationConstants.BE_MEDTURN);
+					if (hlfResponse.isOk()) {
+						list = buildHisotyFromFabricResponse(hlfResponse.getMessage());
+					}
+				}else {
+				
 					resp = new ServiceResponse(Status.INVALID_INPUT,
 							"Invalid seararch status. Valid values are (STATUS,LI_ID,ASN_NO)", "");
 				}
@@ -447,7 +456,7 @@ public class AssetProcessingService {
 									"Line items are updated succesfully at Hyperledger Fabric", "");
 						} else {
 							resp = new ServiceResponse(Status.FAILED_HLF,
-									"Line items are not updated at Hyperledger Fabric", "");
+									"Line items are not updated at Hyperledger Fabric ", "");
 						}
 					} else {
 						resp = new ServiceResponse(Status.FAILED_DB, "Failed to update line items in DB", "");
@@ -589,6 +598,31 @@ public class AssetProcessingService {
 		}
 		
 		return lineItemIdList;
+	}
+	/**
+	 * @param jsonString
+	 *            From Fabric transaction
+	 * @return List<LineItem>
+	 */
+	private List<LineItem> buildHisotyFromFabricResponse(String jsonString) {
+		JsonObject requestObject = CommonUtil.fromJson(jsonString, JsonObject.class);
+		JsonArray lineItems = requestObject.getAsJsonArray("trxitemhistory");
+		
+		List<LineItem> lineItemList = new ArrayList<>();
+
+		for (int index = 0; index < lineItems.size(); index++) {
+			JsonObject lineItem = lineItems.get(index).getAsJsonObject();
+			lineItemList.add(CommonUtil.fromJson(lineItem, LineItem.class));
+		}
+		Collections.sort(lineItemList, new Comparator<LineItem>() {
+
+			@Override
+			public int compare(LineItem o1, LineItem o2) {
+				return o2.getString("timeStamp").compareTo(o1.getString("timeStamp"));
+			}
+	
+		});
+		return lineItemList;
 	}
 	/**
 	 * Updates an existing Disposal Request
